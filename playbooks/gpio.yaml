@@ -1,0 +1,81 @@
+---
+- name: GPIO settings
+  hosts: spark
+  become: yes
+  tasks:
+    - name: Check I2C status
+      ansible.builtin.command:
+        cmd: raspi-config nonint get_i2c
+      register: i2c_check
+      changed_when: false  # This task only gathers info, no changes
+      check_mode: no  # Ensures it runs in check mode
+
+    - name: Ensure I2C is enabled
+      ansible.builtin.command:
+        cmd: raspi-config nonint do_i2c 0
+      when: i2c_check.stdout != "0"
+      register: i2c_status
+      changed_when: i2c_status.rc == 0
+      notify: Reboot if necessary
+
+    - name: Check if SPI is enabled
+      ansible.builtin.command:
+        cmd: raspi-config nonint get_spi
+      register: spi_check
+      changed_when: false  # This task only gathers info, no changes
+      check_mode: no  # Ensures it runs in check mode
+
+    - name: Ensure SPI is enabled
+      ansible.builtin.command:
+        cmd: raspi-config nonint do_spi 0
+      when: spi_check.stdout != "0"
+      register: spi_status
+      changed_when: spi_status.rc == 0
+      notify: Reboot if necessary
+    
+    - name: Check if Serial Console is enabled
+      ansible.builtin.command:
+        cmd: raspi-config nonint get_serial_cons
+      register: serial_console_check
+      changed_when: false  # This task only gathers info, no changes
+      check_mode: no  # Ensures it runs in check mode
+    
+    - name: Disable Serial Console (for DHT22 compatibility)
+      ansible.builtin.command:
+        cmd: raspi-config nonint do_serial_cons 0
+      when: serial_console_check.stdout != "0"
+      register: serial_console_status
+      changed_when: serial_console_status.rc == 0
+      notify: Reboot if necessary
+
+    - name: Check if Serial Hardware is enabled
+      ansible.builtin.command:
+        cmd: raspi-config nonint get_serial_hw
+      register: serial_hw_check
+      changed_when: false  # This task only gathers info, no changes
+      check_mode: no  # Ensures it runs in check mode
+
+    - name: Disable Serial Hardware (for full disable)
+      ansible.builtin.command:
+        cmd: raspi-config nonint do_serial_hw 0
+      when: serial_hw_check.stdout != "0"
+      register: serial_hw_status
+      changed_when: serial_hw_status.rc == 0
+      notify: Reboot if necessary
+
+    - name: Ensure changes are applied in /boot/config.txt
+      ansible.builtin.lineinfile:
+        path: /boot/config.txt
+        line: "{{ item }}"
+        create: yes
+      loop:
+        - "dtparam=i2c_arm=on"
+        - "dtparam=spi=on"
+        - "enable_uart=0"
+      register: config_changes
+      notify: Reboot if necessary
+
+  handlers:
+    - name: Reboot if necessary
+      ansible.builtin.reboot:
+      when: config_changes.changed or i2c_status.changed or spi_status.changed or serial_console_status.changed or serial_hw_status.changed

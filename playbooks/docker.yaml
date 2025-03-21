@@ -1,0 +1,17 @@
+---
+- name: Install Docker on Raspberry Pi 64-bit (Debian 12 - Bookworm)
+  hosts: spark
+  become: yes
+  
+  roles:
+    - role: roles/docker
+
+  tasks:
+    - name: add user to docker group
+      ansible.builtin.user:
+        name: "{{ ansible_user }}"
+        groups: docker
+        append: yes
+        state: present
+        shell: /bin/bash
+        update_password: on_create

@@ -1,0 +1,29 @@
+---
+- name: Install twingate from docker-compose
+  hosts: spark
+  become: yes
+  tasks:
+    - name: Create folder for twingate
+      ansible.builtin.file:
+        path: "/home/{{ ansible_user }}/ct/twingate"
+        state: directory
+        mode: '0755'
+
+    - name: Copy twingate docker-compose.yaml
+      ansible.builtin.copy:
+        src: ../files/twingate-docker-compose.yaml
+        dest: "/home/{{ ansible_user }}/ct/twingate/docker-compose.yaml"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: '0644'
+      
+    - name: Copy secrets for twingate
+      ansible.builtin.copy:
+        src: ../secrets/twingate.env
+        dest: "/home/{{ ansible_user }}/ct/twingate/.env"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: '0644'
+    
+    - name: Run twingate
+      ansible.builtin.command: "docker compose -f /home/{{ ansible_user }}/ct/twingate/docker-compose.yaml up -d"

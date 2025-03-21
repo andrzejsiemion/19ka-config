@@ -1,0 +1,12 @@
+---
+- name: Update cache on Debian-like Linux machines
+  hosts: spark
+  become: yes
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+    
+    - name: Upgrade apt packages
+      apt:
+        upgrade: dist

@@ -1,0 +1,9 @@
+---
+- name: Install temperature and humidity logger from docker-compose
+  hosts: spark
+  become: yes
+  tasks:
+    - name: Run temperature
+      ansible.builtin.command: "docker compose -f /home/{{ ansible_user }}/ct/temperature/docker-compose.yaml up -d"
+  
+  include_tasks: influxdb-load-dasboard.yaml

@@ -1,0 +1,7 @@
+---
+- ansible.builtin.import_playbook: update.yaml
+- ansible.builtin.import_playbook: docker.yaml
+- ansible.builtin.import_playbook: ct-twingate.yaml
+- ansible.builtin.import_playbook: gpio.yaml
+- ansible.builtin.import_playbook: compose-temperature-log.yaml
+

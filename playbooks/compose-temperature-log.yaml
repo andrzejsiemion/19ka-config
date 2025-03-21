@@ -1,0 +1,51 @@
+---
+- name: Install temperature and humidity logger from docker-compose
+  hosts: spark
+  become: yes
+  tasks:
+    - name: Create folders for temparature logger
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "/home/{{ ansible_user }}/ct/temperature"
+        - "/home/{{ ansible_user }}/ct/temperature/creds"
+        - "/home/{{ ansible_user }}/ct/temperature/logs"
+        - "/home/{{ ansible_user }}/ct/temperature/data"
+        - "/home/{{ ansible_user }}/ct/temperature/influxdb-data"
+        - "/home/{{ ansible_user }}/ct/temperature/influxdb-dashboard"
+        - "/home/{{ ansible_user }}/ct/temperature/display"
+
+    - name: Copy temperature docker-compose.yaml
+      ansible.builtin.copy:
+        src: ../files/temperature-docker-compose.yaml
+        dest: "/home/{{ ansible_user }}/ct/temperature/docker-compose.yaml"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: '0644'
+      
+    - name: Copy secrets for temperature .env
+      ansible.builtin.copy:
+        src: ../secrets/temperature.env
+        dest: "/home/{{ ansible_user }}/ct/temperature/.env"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: '0644'
+    
+    - name: Copy ssh keys for github backup of log
+      ansible.builtin.copy:
+        src: ../secrets/creds/key19ka-deploy
+        dest: "/home/{{ ansible_user }}/ct/temperature/creds/key19ka-deploy"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: '0600'
+
+    - name: Copy dashboard template to spark
+      ansible.builtin.copy:
+        src: ../files/19ka-dashboard.json
+        dest: "/home/{{ ansible_user }}/ct/temperature/influxdb-dashboard/19ka-dashboard.json"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: '0644'
+    
