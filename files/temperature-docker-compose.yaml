@@ -1,0 +1,138 @@
+networks:
+  thz_laboratory:
+    driver: bridge
+
+services:
+  logger_internal:
+    container_name: logger_internal
+    image: ghcr.io/andrzejsiemion/logger:0.0.9
+    privileged: true
+    networks:
+      - thz_laboratory
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./display:/app/display
+    environment:
+      TZ: Europe/Warsaw
+      LOG_INTERVAL: 30
+      DHT_PIN: D9
+      DHT_RETRIES: 4
+      DHT_SENSOR_NAME: "internal_sensor"
+#      DHT_SENSOR_TEMP_CORRECTION: "-.5"
+#      DHT_SENSOR_HUM_CORRECTION: "10"
+      INFLUXDB_URL: http://influxdb:8086
+      INFLUXDB_TOKEN: ${INFLUXDB_TOKEN}
+      INFLUXDB_ORG: thz_lab
+      INFLUXDB_BUCKET: sensor_data
+      DISPLAY_SENSOR_LABEL: "int"
+      DISPLAY_SENSOR_FILE: "up.txt"
+    depends_on:
+      influxdb:
+        condition: service_healthy
+    restart: unless-stopped
+    env_file:
+      - .env
+
+  logger_external:
+    container_name: logger_external
+    image: ghcr.io/andrzejsiemion/logger:0.0.9
+    privileged: true
+    networks:
+      - thz_laboratory
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./display:/app/display
+    environment:
+      TZ: Europe/Warsaw
+      LOG_INTERVAL: 30
+      DHT_PIN: D10
+      DHT_RETRIES: 4
+      DHT_SENSOR_NAME: "external_sensor"
+#      DHT_SENSOR_TEMP_CORRECTION: "-.5"
+#      DHT_SENSOR_HUM_CORRECTION: "10"
+      INFLUXDB_URL: http://influxdb:8086
+      INFLUXDB_TOKEN: ${INFLUXDB_TOKEN}
+      INFLUXDB_ORG: thz_lab
+      INFLUXDB_BUCKET: sensor_data
+      DISPLAY_SENSOR_LABEL: "ext"
+      DISPLAY_SENSOR_FILE: "down.txt"
+    depends_on:
+      influxdb:
+        condition: service_healthy
+    restart: unless-stopped
+    env_file:
+      - .env
+
+  influxdb:
+    container_name: influxdb
+    image: influxdb:2.7
+    networks:
+      - thz_laboratory
+    ports:
+      - "8086:8086"
+    volumes:
+      - ./influxdb-data:/var/lib/influxdb2 # Persist entire InfluxDB data
+      - /etc/localtime:/etc/localtime:ro  # Sync host time zone
+      - /etc/timezone:/etc/timezone:ro
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: admin
+      DOCKER_INFLUXDB_INIT_PASSWORD: ${DOCKER_INFLUXDB_INIT_PASSWORD}
+      DOCKER_INFLUXDB_INIT_ORG: thz_lab
+      DOCKER_INFLUXDB_INIT_BUCKET: sensor_data
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: ${DOCKER_INFLUXDB_INIT_ADMIN_TOKEN}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://influxdb:8086/health"]
+      interval: 10s
+      retries: 5
+      start_period: 10s
+      timeout: 5s
+    restart: unless-stopped
+    env_file:
+      - .env
+
+  file-sync:
+    container_name: file-sync
+    image: ghcr.io/andrzejsiemion/file-sync:0.0.5
+    networks:
+      - thz_laboratory
+    volumes:
+      - ${SSH_PRIVATE_KEY_PATH}:/root/.ssh/id_rsa:ro
+      - ./data:/app/data
+    environment:
+      GIT_REPO: ${GIT_REPO}
+      GIT_BRANCH: main
+      GIT_EMAIL: ${GIT_EMAIL}
+      GIT_NAME: ${GIT_NAME}
+      CRON_SCHEDULE: "*/10 * * * *"
+    restart: unless-stopped
+    env_file:
+      - .env
+
+  info-display:
+    container_name: display
+    image: ghcr.io/andrzejsiemion/info-display:0.0.1
+    privileged: true
+    devices:
+      - "/dev/i2c-1:/dev/i2c-1"
+    networks:
+      - thz_laboratory
+    volumes:
+      - ./display:/app/display:ro
+    depends_on:
+      influxdb:
+        condition: service_healthy
+    restart: unless-stopped
+    environment:
+      INFLUXDB_URL: http://influxdb:8086
+      INFLUXDB_TOKEN: ${INFLUXDB_TOKEN}
+      INFLUXDB_ORG: thz_lab
+      INFLUXDB_BUCKET: sensor_data
+      INFLUXDB_MEASUREMENT: temperature_humidity
+      INFLUXDB_SENSOR_ID1: external_sensor
+      INFLUXDB_SENSOR_ID2: internal_sensor
+      FIELD_HUMIDITY: humidity
+      FIELD_TEMPERATURE: temperature
+      TZ: "Europe/Warsaw"
