@@ -1,0 +1,5 @@
+# ignore all files in seceret folder
+secret/*
+
+# But keep the folder itself
+!secret/.gitkeep
