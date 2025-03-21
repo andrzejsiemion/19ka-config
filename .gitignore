@@ -1,5 +1,8 @@
+# Ignore macOS metadata files
+.DS_Store
+
 # ignore all files in seceret folder
-secret/*
+secrets/*
 
 # But keep the folder itself
-!secret/.gitkeep
+!secrets/.gitkeep
