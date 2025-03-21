@@ -1,0 +1,21 @@
+# 19ka ----------------------------------
+[wf19ka]
+tskin ansible_host=10.19.0.10 
+firestorm ansible_host=10.19.0.20
+dataflare ansible_host=10.19.0.30 ansible_ssh_user=admin
+
+[wf19ka:vars]
+ansible_ssh_user=root
+ansible_ssh_private_key_file=~/.ssh/siemion
+
+[wf19ka_ct]
+spark ansible_host=10.19.0.15
+fireplace01 ansible_host=10.19.0.25
+
+[wf19ka_ct:vars]
+ansible_ssh_user=fireman
+ansible_user=fireman
+ansible_ssh_private_key_file=~/.ssh/siemion
+
+[wf19ka_win]
+firefighter ansible_host=10.19.0.35
